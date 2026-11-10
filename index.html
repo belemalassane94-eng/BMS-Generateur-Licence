@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123b5d">
+<title>BMS Générateur de Licence</title>
+<style>
+:root{--navy:#123b5d;--blue:#176b87;--bg:#f2f6fa;--ink:#172b3a;--muted:#607587;--line:#d8e2eb;--green:#18794e;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:linear-gradient(135deg,#123b5d,#176b87);color:white;padding:22px 16px}
+main{max-width:760px;margin:0 auto;padding:14px}
+h1{font-size:24px;margin:0 0 5px}header p{margin:0;opacity:.9}
+.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;margin:13px 0;box-shadow:0 3px 12px #123b5d0a}
+h2{font-size:18px;color:var(--navy);margin:0 0 12px}
+label{display:block;font-weight:650;margin:12px 0 5px}
+input{width:100%;padding:12px;border:1px solid #bdcbd8;border-radius:9px;font:inherit;background:#fff}
+input:focus{outline:2px solid #8dc5dc;border-color:var(--blue)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:9px;padding:12px 15px;background:var(--blue);color:white;font-weight:700;font-size:14px;margin:10px 6px 0 0}
+button.secondary{background:#e8f0f5;color:var(--navy)}button.danger{background:#fff0ef;color:var(--red)}
+.note{padding:12px;border-radius:10px;background:#fff7e6;border:1px solid #f0dcae;font-size:13px;line-height:1.45}
+.good{color:var(--green);font-weight:650}.bad{color:var(--red);font-weight:650}
+.output{margin-top:12px;padding:12px;background:#edf3f7;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px ui-monospace,monospace}
+.small{color:var(--muted);font-size:12px;line-height:1.45}
+.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#edf3f7;border-radius:9px;padding:10px 12px;flex:1;min-width:120px}
+.stat b{display:block;font-size:20px;color:var(--navy)}
+.device{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}h1{font-size:21px}}
+</style>
+</head>
+<body>
+<header><h1>BMS GÉNÉRATEUR DE LICENCE</h1><p>Administration des licences de BMS ÉVALUATION · Belem Multi Service</p></header>
+<main>
+<div class="note"><b>CONFIDENTIEL — À conserver uniquement par l’administrateur BMS.</b><br>
+Cet outil contient la clé privée de signature. Ne transmettez jamais ce fichier aux établissements et ne le publiez pas en ligne. Les codes sont signés localement, sans connexion Internet.</div>
+
+<section class="card">
+<h2>1. Paramètres de la licence de l’établissement</h2>
+<label>Nom de l’établissement</label><input id="school" placeholder="Ex. École primaire publique de Wigayatoulaye">
+<div class="grid">
+<div><label>Référence commune de licence</label><input id="license" placeholder="Ex. BMS-2026-001"></div>
+<div><label>Nombre maximal de téléphones</label><input id="limit" type="number" min="1" max="500" value="10"></div>
+</div>
+<div class="grid">
+<div><label>Date de début</label><input id="start" type="date"></div>
+<div><label>Durée (mois)</label><input id="months" type="number" min="1" max="36" value="12"></div>
+</div>
+<label>Date d’expiration calculée</label><input id="expiry" type="date" readonly>
+<p class="small">La même référence et les mêmes dates doivent être utilisées pour tous les téléphones d’un même établissement.</p>
+</section>
+
+<section class="card">
+<h2>2. Enregistrer un téléphone et générer son code</h2>
+<label>Identifiant d’installation affiché dans BMS ÉVALUATION</label>
+<input id="device" placeholder="Collez ici l’identifiant exact du téléphone" autocapitalize="characters">
+<button id="generate">Générer le code signé</button>
+<div id="status" aria-live="polite"></div>
+<div id="output" class="output" hidden></div>
+<button id="copy" class="secondary" hidden>Copier le code</button>
+</section>
+
+<section class="card">
+<h2>3. Suivi des téléphones autorisés</h2>
+<div class="stats">
+<div class="stat"><span class="small">Téléphones enregistrés</span><b id="used">0</b></div>
+<div class="stat"><span class="small">Places restantes</span><b id="remaining">10</b></div>
+</div>
+<div id="devices" class="small" style="margin-top:12px">Aucun téléphone enregistré pour cette référence.</div>
+<button id="export" class="secondary">Exporter la liste</button>
+<button id="reset" class="danger">Effacer le suivi local</button>
+<p class="small">Le suivi est conservé sur ce navigateur. Faites régulièrement un export et gardez-le en lieu sûr. Pour éviter les dépassements, utilisez toujours le même fichier et le même navigateur administrateur.</p>
+</section>
+<footer>BMS ÉVALUATION · Générateur administrateur · Assistance : 64469096</footer>
+</main>
+<script>
+const PRIVATE_KEY={"kty":"EC","crv":"P-256","x":"xRWbt2iHaqyiF9YSmFffKAl9o15xsQjlre6Y2AP-XQ0","y":"uGrZ8ecBu9mtgCyixjC3dTj-98GKZx8StZoRCs9au9w","d":"clxKlbLpETIxpP6wwxVgpwjsWlXMqUWaLd2BtuKBnyw","ext":true,"key_ops":["sign"]};
+const $=id=>document.getElementById(id);
+let lastCode="";
+const STORE="bms_license_registry_v2";
+function b64u(bytes){let s="";bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function randRef(){const a=new Uint8Array(6);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(16).padStart(2,"0")).join("").toUpperCase()}
+function addMonths(iso,n){const [y,m,d]=iso.split("-").map(Number);const dt=new Date(y,m-1,d);const day=dt.getDate();dt.setMonth(dt.getMonth()+n);if(dt.getDate()<day)dt.setDate(0);return [dt.getFullYear(),String(dt.getMonth()+1).padStart(2,"0"),String(dt.getDate()).padStart(2,"0")].join("-")}
+function registry(){try{return JSON.parse(localStorage.getItem(STORE)||"{}")}catch(e){return {}}}
+function saveRegistry(x){localStorage.setItem(STORE,JSON.stringify(x))}
+function key(){return $("license").value.trim()||"BMS-"+randRef()}
+function updateExpiry(){const s=$("start").value,n=Math.max(1,Math.min(36,Number($("months").value)||12));$("expiry").value=s?addMonths(s,n):""}
+function render(){const lic=$("license").value.trim();const all=registry();const list=all[lic]||[];const max=Math.max(1,Number($("limit").value)||1);$("used").textContent=list.length;$("remaining").textContent=Math.max(0,max-list.length);$("devices").innerHTML=list.length?list.map((d,i)=>`<div class="device"><span>${i+1}. ${escapeHtml(d.device)}</span><span>${escapeHtml(d.date)}</span></div>`).join(""):"Aucun téléphone enregistré pour cette référence."}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("start").value=new Date().toISOString().slice(0,10);$("license").value="BMS-"+randRef();updateExpiry();render();
+$("start").addEventListener("change",updateExpiry);$("months").addEventListener("input",updateExpiry);
+$("license").addEventListener("input",render);$("limit").addEventListener("input",render);
+$("generate").addEventListener("click",async()=>{
+ const school=$("school").value.trim(),device=$("device").value.trim().toUpperCase(),lic=key(),exp=$("expiry").value,start=$("start").value,max=Math.max(1,Math.min(500,Number($("limit").value)||1));
+ $("status").className="";$("output").hidden=true;$("copy").hidden=true;lastCode="";
+ if(!school||!device||!start||!exp){$("status").textContent="Renseignez le nom, l’identifiant et les dates.";return}
+ const all=registry(),list=all[lic]||[];
+ if(list.some(x=>x.device===device)){ $("status").textContent="Cet identifiant est déjà enregistré pour cette licence.";return}
+ if(list.length>=max){$("status").className="bad";$("status").textContent="Limite atteinte : "+max+" téléphone(s) autorisé(s).";return}
+ if(new Date(exp+"T23:59:59")<=new Date()){ $("status").textContent="La date d’expiration doit être future.";return}
+ try{
+  const k=await crypto.subtle.importKey("jwk",PRIVATE_KEY,{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);
+  const data={app:"BMS-EVAL",v:1,school,device,exp,license:lic,issued:new Date().toISOString().slice(0,10)};
+  const body=b64u(new TextEncoder().encode(JSON.stringify(data)));
+  const sig=await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},k,new TextEncoder().encode(body));
+  lastCode=body+"."+b64u(new Uint8Array(sig));
+  list.push({device,date:new Date().toISOString().slice(0,10)});
+  all[lic]=list;saveRegistry(all);
+  $("output").textContent=lastCode;$("output").hidden=false;$("copy").hidden=false;
+  $("status").className="good";$("status").textContent="Code signé créé pour "+school+". Remettez ce code à l’établissement.";
+  $("device").value="";render();
+ }catch(e){$("status").className="bad";$("status").textContent="Impossible de signer. Ouvrez ce fichier dans Google Chrome ou un navigateur compatible, puis réessayez. Détail : "+e.message}
+});
+$("copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(lastCode);$("status").textContent="Code copié."}catch(e){$("status").textContent="Appuyez longuement sur le code pour le sélectionner et le copier."}});
+$("export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(registry(),null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="BMS_suivi_licences.json";a.click();URL.revokeObjectURL(a.href)});
+$("reset").addEventListener("click",()=>{if(confirm("Effacer tout le suivi enregistré sur ce navigateur ? Faites d’abord un export. Cette action ne révoque pas les codes déjà émis.")){localStorage.removeItem(STORE);render()}});
+</script>
+</body></html>

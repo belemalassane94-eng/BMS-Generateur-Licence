@@ -1,9 +1,8 @@
-name: BMS Android APK
-
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
 
 permissions:
   contents: read
